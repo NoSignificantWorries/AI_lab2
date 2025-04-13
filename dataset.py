@@ -52,13 +52,12 @@ class SegmentationDataset(Dataset):
 
         image = Image.open(image_path).convert("RGB")
         mask = np.array(Image.open(mask_path), dtype=np.float64) / 255
+        mask = np.mean(mask, axis=-1)
 
-        if self.transform:
-            image = self.transform(image)
-            mask = transforms.ToTensor()(mask)
-            mask = transforms.Resize((256, 256))(mask)
-            mask = mask.long().squeeze()
-            mask = torch.argmax(mask, dim=0)
+        image = self.transform(image)
+        mask = transforms.ToTensor()(mask)
+        mask = transforms.Resize((256, 256))(mask)
+        mask = mask.long().squeeze()
 
         return image, mask
 
