@@ -11,7 +11,7 @@ from tqdm import tqdm
 class DatasetParam:
     num_classes = 2
     batch_size = 4
-    num_workers = 2
+    num_workers = 4
     dataset_path = "resources/water_v2"
     images_path = os.path.join(dataset_path, "JPEGImages")
     masks_path = os.path.join(dataset_path, "Annotations")
@@ -59,7 +59,6 @@ class SegmentationDataset(Dataset):
             mask = transforms.Resize((256, 256))(mask)
             mask = mask.long().squeeze()
             mask = torch.argmax(mask, dim=0)
-            print(mask.shape)
 
         return image, mask
 
