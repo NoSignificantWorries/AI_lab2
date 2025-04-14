@@ -10,7 +10,7 @@ class ModelParam:
     batch_size = DatasetParam.batch_size
 
 def init_model(num_classes, pretrained=False, weights_path="work"):
-    model = models.segmentation.deeplabv3_resnet101(weights="DeepLabV3_ResNet101_Weights.DEFAULT", progress=True)
+    model = models.segmentation.deeplabv3_mobilenet_v3_large(weights="DeepLabV3_MobileNet_V3_Large_Weights.DEFAULT", progress=True)
 
     in_features = model.classifier[4].in_channels
 

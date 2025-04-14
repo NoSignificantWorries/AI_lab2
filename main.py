@@ -14,24 +14,31 @@ dset.init()
 import model as mdl
 
 
-def train(device, criterion, optimizer, model, dataloaders, num_epochs, valid_epoch_step, save_period=-1):
-    save_dir = f"work/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+def train(device, criterion, optimizer, model, dataloaders, num_epochs, valid_epoch_step, save_period=-1, checkpoint_dir=None):
+    if checkpoint_dir is None:
+        save_dir = f"work/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    else:
+        save_dir = f"work/from_checkpoint__{checkpoint_dir}__{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     if not os.path.exists(f"{save_dir}/weights"):
         os.makedirs(f"{save_dir}/weights")
 
-    results = {
-        "train": {
-            "Loss": [],
-            "IoU": [],
-            "Dice": []
-        },
-        "valid": {
-            "Loss": [],
-            "IoU": [],
-            "Dice": []
+    if checkpoint_dir is None:
+        results = {
+            "train": {
+                "Loss": [],
+                "IoU": [],
+                "Dice": []
+            },
+            "valid": {
+                "Loss": [],
+                "IoU": [],
+                "Dice": []
+            }
         }
-    }
+    else:
+        with open(f"work/{checkpoint_dir}/results.json", "r", encoding="utf-8") as file:
+            results = json.load(file)
 
     for epoch in range(num_epochs):
         if (epoch + 1) % valid_epoch_step == 0:
@@ -79,15 +86,15 @@ def train(device, criterion, optimizer, model, dataloaders, num_epochs, valid_ep
         results[phase]["IoU"].append(running_IoU / total_samples)
         results[phase]["Dice"].append(running_dice / total_samples)
 
+        with open(f"{save_dir}/results.json", "w") as file:
+            json.dump(results, file, indent=4)
+
         if save_period > 0:
             if (epoch + 1) % save_period == 0:
                 torch.save(model.state_dict(), f"{save_dir}/weights/model_{epoch + 1}.pth")
     
     torch.save(model.state_dict(), f"{save_dir}/weights/model_last.pth")
 
-    # saving training data in json file
-    with open(f"{save_dir}/results.json", "w") as json_file:
-        json.dump(results, json_file, indent=4)
     return results
 
 
@@ -122,7 +129,7 @@ def test(device, criterion, model, dataloaders):
 
 
 
-def main(mode="train", num_epochs=10, valid_epoch_step=5, save_period=-1, weights="work"):
+def main(mode="train", num_epochs=10, valid_epoch_step=5, save_period=-1, from_checkpoint=False, chekpoint_dir="work"):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # device = "cpu"
     print("Working on device:", device)
@@ -138,20 +145,17 @@ def main(mode="train", num_epochs=10, valid_epoch_step=5, save_period=-1, weight
     dataloaders = {"train": DataLoader(train_dataset, batch_size=dset.DatasetParam.batch_size, shuffle=True),
                    "valid": DataLoader(valid_dataset, batch_size=dset.DatasetParam.batch_size, shuffle=True)}
     
-    if mode == "train":
-        model = mdl.init_model(dset.DatasetParam.num_classes).to(device)
-    else:
-        model = mdl.init_model(dset.DatasetParam.num_classes, True, weights).to(device)
+    model = mdl.init_model(dset.DatasetParam.num_classes, from_checkpoint, f"work/{chekpoint_dir}/weights/model_last.pth").to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=mdl.ModelParam.lr)
 
     if mode == "train":
-        train(device, criterion, optimizer, model, dataloaders, num_epochs, valid_epoch_step, save_period)
+        train(device, criterion, optimizer, model, dataloaders, num_epochs, valid_epoch_step, save_period, chekpoint_dir)
     else:
         test(device, criterion, model, dataloaders)
 
 
 if __name__ == "__main__":
-    main("train", 30, 5, 5)
+    main("train", 30, 5, 5, True, "20250414_054413")
     # main("test", weights="work/20250413_124313/weights/model_last.pth")
