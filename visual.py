@@ -21,7 +21,7 @@ if __name__ == "__main__":
     _, canvas = plt.subplots(
         ncols=len(data[list(data.keys())[0]].keys()), 
         nrows=len(data.keys()),
-        figsize=(25, 12)
+        figsize=(36, 12)
     )
     
     for i, group in enumerate(data.keys()):
@@ -32,7 +32,7 @@ if __name__ == "__main__":
             canvas[i][j].grid(axis='x', linestyle='-', linewidth=2, color='gray')
             canvas[i][j].grid(axis='y', linestyle='--', alpha=0.5)
 
-            canvas[i][j].plot(list(range(len(values))), values, "g-o")
+            canvas[i][j].plot(list(range(len(values))), values, "g")
             canvas[i][j].set_title(f"{group}/{metric}")
     
     plt.savefig(f"{path}/results.png", format="png", dpi=300)
