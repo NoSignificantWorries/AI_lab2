@@ -5,8 +5,6 @@ import torch.nn.functional as F
 
 from dataset import DatasetParam
 
-# 1094
-# 106
 
 class ModelParam:
     lr = 0.001

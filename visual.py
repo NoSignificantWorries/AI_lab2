@@ -27,6 +27,7 @@ if __name__ == "__main__":
     for i, group in enumerate(data.keys()):
         for j, metric in enumerate(data[group].keys()):
             values = data[group][metric]
+            print(len(values))
 
             canvas[i][j].set_xticks(np.arange(0, len(values) + 1, n_range))
             canvas[i][j].grid(axis='x', linestyle='-', linewidth=2, color='gray')

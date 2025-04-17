@@ -118,8 +118,10 @@ def test(device, criterion, model, dataloaders):
     model.eval()
 
     running_loss = 0.0
-    running_IoU = 0.0
-    running_dice = 0.0
+    running_IoU_0 = 0.0
+    running_IoU_1 = 0.0
+    running_dice_0 = 0.0
+    running_dice_1 = 0.0
     total_samples = 0
     with tqdm(dataloaders["valid"], desc="Testing...") as pbar:
         for (images, masks) in pbar:
@@ -132,21 +134,26 @@ def test(device, criterion, model, dataloaders):
             output_mask = torch.argmax(output_mask, dim=1)
 
             running_loss += loss.item() * images.size(0)
-            running_IoU += mdl.calculate_iou(output_mask, masks) * images.size(0)
-            running_dice += mdl.calculate_dice(output_mask, masks) * images.size(0)
+            iou = mdl.compute_iou(output_mask, masks)
+            dice = mdl.compute_dice(output_mask, masks)
+            running_IoU_0 += iou[0] * images.size(0)
+            running_IoU_1 += iou[1] * images.size(0)
+            running_dice_0 += dice[0] * images.size(0)
+            running_dice_1 += dice[1] * images.size(0)
 
             total_samples += images.size(0)
+
+            avg_IoU = (running_IoU_0 + running_IoU_1) / (2 * total_samples) 
+            avg_dice = (running_dice_0 + running_dice_1) / (2 * total_samples) 
             pbar.set_postfix({"loss": f"{(running_loss / total_samples):.3f}",
-                              "IoU": f"{(running_IoU / total_samples):.3f}",
-                              "dice": f"{(running_dice / total_samples):.3f}"})
+                              "IoU(0/1/avg)": f"{(running_IoU_0 / total_samples):.3f}/{(running_IoU_1 / total_samples):.3f}/{(avg_IoU):.3f}",
+                              "dice(0/1/avg)": f"{(running_dice_0 / total_samples):.3f}/{(running_dice_1 / total_samples):.3f}/{(avg_dice):.3f}"})
             
-    print(f"Total metrics:\nLoss: {(running_loss / total_samples):.3f}, IoU: {(running_IoU / total_samples):.3f}, Dice: {(running_dice / total_samples):.3f}")
-
-
 
 def main(mode="train", num_epochs=10, valid_epoch_step=5, save_period=-1, from_checkpoint=False, chekpoint_dir=None):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # device = "cpu"
+    if mode == "test":
+        device = "cpu"
     print("Working on device:", device)
     
     train_dataset = dset.SegmentationDataset(dset.DatasetParam.images_path,
@@ -173,9 +180,8 @@ def main(mode="train", num_epochs=10, valid_epoch_step=5, save_period=-1, from_c
 
 
 if __name__ == "__main__":
-    # main("train", 250, 10, 10, True, "20250414_054413")
-    main("train", 250, 5, 10, True, "20250415_152102")
-    # main("train", 250, 5, 10)
+    # main("train", 250, 5, 10, True, "20250415_152102")
+    main("test", from_checkpoint=True, chekpoint_dir="20250416_042826")
     '''
     pc = transforms.ToTensor()(np.array([[[1, 0, 2, 0], [1, 0, 0, 3], [1, 0, 0, 0], [1, 0, 0, 0]]]))
     tg = transforms.ToTensor()(np.array([[[1, 1, 2, 0], [1, 1, 2, 0], [1, 1, 0, 0], [1, 1, 0, 0]]]))
