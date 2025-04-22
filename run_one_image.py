@@ -1,4 +1,5 @@
 import os
+import random
 
 from tqdm import tqdm
 import torch
@@ -22,11 +23,22 @@ def run_image(device, model, image_path, image_name):
     output_mask = torch.softmax(outputs, dim=1)
     output_mask = torch.argmax(output_mask, dim=1)
     output_mask = output_mask.cpu().numpy()
-    
+    output_mask = output_mask[0]
     output_mask *= 255
-    
+
     resized_mask = cv2.resize(output_mask.astype(np.uint8), (width, height), interpolation=cv2.INTER_NEAREST)
-    cv2.imwrite(f"results/{image_name}", resized_mask)
+
+    color = [255, 255, 0]
+    color_mask = np.zeros_like(np.array(orig_image), dtype=np.uint8)
+    color_mask[resized_mask > 0] = color
+
+    orig_cv = np.array(orig_image)
+    orig_cv = cv2.cvtColor(orig_cv, cv2.COLOR_RGB2BGR)
+
+    alpha = 0.6
+    overlayed = cv2.addWeighted(orig_cv, 1 - alpha, color_mask, alpha, 0)
+    
+    cv2.imwrite(f"results/{image_name}", overlayed)
 
 
 def main(weights):
@@ -35,10 +47,17 @@ def main(weights):
     model = mdl.init_model(dset.DatasetParam.num_classes, True, weights).to(device)
     model.eval()
     
-    with tqdm(os.listdir("resources/water_v2/JPEGImages/ADE20K"), desc="Working...") as pbar:
-        for image_name in pbar:
-            run_image(device, model, f"resources/water_v2/JPEGImages/ADE20K/{image_name}", image_name)
+    images = []
+    for dir_ in dset.DatasetParam.valid_part:
+        for image_name in os.listdir(os.path.join("resources", "water_v2", "JPEGImages", dir_)):
+            images.append((os.path.join("resources", "water_v2", "JPEGImages", dir_, image_name), image_name))
+    random.shuffle(images)
+    images = images[:int(len(images) * 0.5)]
+    
+    with tqdm(images, desc="Working...") as pbar:
+        for image_path, image_name in pbar:
+            run_image(device, model, image_path, image_name)
 
 
 if __name__ == "__main__":
-    main("work/20250413_124313/weights/model_last.pth")
+    main("model/model_last.pth")
